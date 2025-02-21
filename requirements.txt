@@ -3,3 +3,4 @@ backtrader
 pandas
 matplotlib
 talib
+MetaTrader5
