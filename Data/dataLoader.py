@@ -9,13 +9,13 @@ class Data:
     A class to handle market data retrieval from MetaTrader 5.
     """
 
-    def __init__(self, numOfCandles=28800, symbol='EURUSD', timeframe=mt5.TIMEFRAME_M1):
+    def __init__(self, numOfCandles=28800, symbol='EURUSD', timeframe=mt5.TIMEFRAME_M15):
         self.numOfCandles = numOfCandles
         self.symbol = symbol
         self.timeframe = timeframe
-        self.full_data = self._load_data()
+        self.full_data = self.load_data()
 
-    def _load_data(self):
+    def load_data(self):
         """
         Load market data from MetaTrader 5.
         """
@@ -27,7 +27,8 @@ class Data:
             df = pd.DataFrame(rates)
             df['time'] = pd.to_datetime(df['time'], unit='s')
             df.set_index('time', inplace=True) 
-
+            # Ensure column names match Backtrader's expectations
+            df = df.rename(columns={'tick_volume': 'volume'})
             return df
 
     def get_last_2_weeks_data(self):
@@ -50,4 +51,6 @@ class Data:
         df = pd.DataFrame(rates)
         df['time'] = pd.to_datetime(df['time'], unit='s')
         df.set_index('time', inplace=True) 
+        # Ensure column names match Backtrader's expectations
+        df = df.rename(columns={'tick_volume': 'volume'})
         return df
