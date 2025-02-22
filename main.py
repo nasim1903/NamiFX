@@ -16,7 +16,7 @@ user_input = input("Press 1 to run the backtester: ")
 
 if user_input == "1":
     backtester = backtest.Backtester()
-    backtester.runBackTest()  
+    backtester.runBackTestForStrategy(plot=True)  
     print("Backtester has finished running.")
 else:
     print("Invalid input. Exiting...")
