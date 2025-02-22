@@ -8,7 +8,7 @@ from Data import dataLoader as dl
 
 
 class Backtester:
-
+    @staticmethod
     def runBackTest():
         cerebro = bt.Cerebro()
 
