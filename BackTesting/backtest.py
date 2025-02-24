@@ -2,68 +2,53 @@ import backtrader as bt
 import sys
 import os
 import pandas as pd
+from typing import Type  # Import for type hinting
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Data import dataLoader as dl
-
-# Create a Stratey
-class TestStrategy(bt.Strategy):
-
-    def log(self, txt, dt=None):
-        ''' Logging function for this strategy'''
-        dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
-
-    def __init__(self):
-        # Keep a reference to the "close" line in the data[0] dataseries
-        self.dataclose = self.datas[0].close
-
-    def next(self):
-        # Simply log the closing price of the series from the reference
-        self.log('Close, %.2f' % self.dataclose[0])
-
-        if self.dataclose[0] < self.dataclose[-1]:
-            # current close less than previous close
-            if self.dataclose[-1] < self.dataclose[-2]:
-                # previous close less than the previous close
-
-                # BUY, BUY, BUY!!! (with all possible default parameters)
-                self.log('BUY CREATE, %.2f' % self.dataclose[0])
-                self.buy()
+from Strategies.TestStrategy import TestStrategy 
 
 
 class Backtester:
 
     @staticmethod
+    def runBackTestForStrategy(strategy: Type[bt.Strategy], plot: bool = False):
+        """
+        Runs a backtest using the provided strategy.
 
-    def runBackTestForStrategy(plot=False):
+        :param strategy: The strategy class to be used for backtesting (must be a subclass of bt.Strategy).
+        :param plot: Boolean to determine whether to plot the results.
+        """
         cerebro = bt.Cerebro()
 
         fxdata = dl.Data()
-
         twoWeekData = fxdata.get_last_2_weeks_data()
 
         # Ensure data is not empty
-        if twoWeekData.empty :
+        if twoWeekData.empty:
             raise ValueError("Error: Loaded data is empty. Check the data source.")
 
         # Feed data into Backtrader
         btData = bt.feeds.PandasData(dataname=twoWeekData)
-        cerebro.adddata(data=btData)
-        cerebro.addstrategy(TestStrategy)
+        cerebro.adddata(btData)
+
+        # Add the provided strategy dynamically
+        cerebro.addstrategy(strategy)
+
         # Set initial cash
         cerebro.broker.setcash(100000)
+        cerebro.broker.setcommission(commission=0.001)
         print(f"Initial Broker Cash: {cerebro.broker.get_value()}")
 
         # Run backtest
         cerebro.run()
 
-        if plot == True:
+        # Plot results if needed
+        if plot:
             cerebro.plot(style='bar')
 
         print(f"Final Broker Cash: {cerebro.broker.get_value()}")
 
-        # Plot results
 
-
-# Run the backtest
-# Backtester.runBackTestForStrategy()
+# Run the backtest using TestStrategy
+# Backtester.runBackTestForStrategy(TestStrategy, plot=True)
