@@ -2,7 +2,9 @@ import backtrader as bt
 import sys
 import os
 import pandas as pd
+import MetaTrader5 as mt5
 from typing import Type  # Import for type hinting
+import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Data import dataLoader as dl
@@ -21,8 +23,8 @@ class Backtester:
         """
         cerebro = bt.Cerebro()
 
-        fxdata = dl.Data()
-        twoWeekData = fxdata.get_last_2_weeks_data()
+        fxdata = dl.Data(timeframe=mt5.TIMEFRAME_H4, numOfCandles=1000, symbol="GBPUSD")
+        twoWeekData = fxdata.full_data
 
         # Ensure data is not empty
         if twoWeekData.empty:
@@ -32,23 +34,31 @@ class Backtester:
         btData = bt.feeds.PandasData(dataname=twoWeekData)
         cerebro.adddata(btData)
 
-        # Add the provided strategy dynamically
-        cerebro.addstrategy(strategy)
+        # Add a FixedSize sizer according to the stake
+        cerebro.addsizer(bt.sizers.FixedSize, stake=1000)
+
+        # Add a strategy
+        strats = cerebro.optstrategy(
+            TestStrategy,
+            maperiod=range(10, 500))
 
         # Set initial cash
         cerebro.broker.setcash(100000)
-        cerebro.broker.setcommission(commission=0.001)
+        cerebro.broker.setcommission(commission=0.01)
         print(f"Initial Broker Cash: {cerebro.broker.get_value()}")
 
         # Run backtest
-        cerebro.run()
+        cerebro.run(maxcpus=5)
 
         # Plot results if needed
-        if plot:
-            cerebro.plot(style='bar')
+        # if plot:
+        #     cerebro.plot(style='bar')
 
         print(f"Final Broker Cash: {cerebro.broker.get_value()}")
 
 
-# Run the backtest using TestStrategy
-# Backtester.runBackTestForStrategy(TestStrategy, plot=True)
+if __name__ == '__main__':
+    # Required for Windows to properly handle multiprocessing
+    multiprocessing.freeze_support()  
+    # Run the backtest using TestStrategy
+    Backtester.runBackTestForStrategy(TestStrategy, plot=True)
