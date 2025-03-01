@@ -8,7 +8,7 @@ import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Data import dataLoader as dl
-from Strategies.TestStrategy import TestStrategy 
+from Strategies.MaCrossOver import MaCrossOverBt 
 
 
 class Backtester:
@@ -23,7 +23,7 @@ class Backtester:
         """
         cerebro = bt.Cerebro()
 
-        fxdata = dl.Data(timeframe=mt5.TIMEFRAME_H4, numOfCandles=1000, symbol="GBPUSD")
+        fxdata = dl.Data()
         twoWeekData = fxdata.full_data
 
         # Ensure data is not empty
@@ -38,9 +38,11 @@ class Backtester:
         cerebro.addsizer(bt.sizers.FixedSize, stake=1000)
 
         # Add a strategy
-        strats = cerebro.optstrategy(
-            TestStrategy,
-            maperiod=range(10, 500))
+        # strats = cerebro.optstrategy(
+        #     MaCrossOverBt,
+        #     maperiod=range(5, 25))
+
+        cerebro.addstrategy(MaCrossOverBt)
 
         # Set initial cash
         cerebro.broker.setcash(100000)
@@ -48,17 +50,18 @@ class Backtester:
         print(f"Initial Broker Cash: {cerebro.broker.get_value()}")
 
         # Run backtest
-        cerebro.run(maxcpus=5)
+        cerebro.run(maxcpus=12)
 
         # Plot results if needed
-        # if plot:
-        #     cerebro.plot(style='bar')
+        if plot:
+            cerebro.plot(style='bar')
 
         print(f"Final Broker Cash: {cerebro.broker.get_value()}")
+
 
 
 if __name__ == '__main__':
     # Required for Windows to properly handle multiprocessing
     multiprocessing.freeze_support()  
     # Run the backtest using TestStrategy
-    Backtester.runBackTestForStrategy(TestStrategy, plot=True)
+    Backtester.runBackTestForStrategy(MaCrossOverBt, plot=True)
