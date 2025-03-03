@@ -1,23 +1,17 @@
-import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Data import dataLoader as dl
-import pandas as pd
 import backtrader as bt
-import MetaTrader5 as mt5
 
 
 class MaCrossOverBt(bt.Strategy):
     params = (
-        ('maperiod', 34),
+        ('maperiod', 10),
         ('maperiod2', 50),
-        ('printlog', False),
+        ('printlog', True),
         ('pip_value', 0.0001),  # Default pip value for most currency pairs
         ('stop_loss', 30),  # 10 pips stop loss
         ('take_profit', 100),  # 10 pips take profit
     )
 
-    def log(self, txt, dt=None, doprint=False):
+    def log(self, txt, dt=None, doprint=True):
         ''' Logging function for this strategy '''
         if self.params.printlog or doprint:
             dt = dt or self.datas[0].datetime.date(0)
@@ -30,13 +24,13 @@ class MaCrossOverBt(bt.Strategy):
             self.datas[0], period=self.params.maperiod)
         self.ema = bt.indicators.ExponentialMovingAverage(
             self.datas[0], period=self.params.maperiod2)
-                # Initialize variable for tracking all-time high
-        self.all_time_high = self.broker.get_cash()
+        # Initialize variable for tracking all-time high
+        self.trade_count = 0
 
     def stop(self):
         self.log(f'Final Value: {self.broker.get_cash():.2f}', doprint=True)
         self.log(f'ma: {self.params.maperiod}', doprint=True)
-
+        self.log(f'Trade Count: {self.trade_count}')
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -50,56 +44,42 @@ class MaCrossOverBt(bt.Strategy):
             self.log('Order Canceled/Margin/Rejected')
         self.order = None
 
-    def next(self):
+def next(self):
+    if self.order:
+        return
 
-        # Update all-time high
-        current_value = self.broker.get_cash()
-        if current_value > self.all_time_high:
-            self.all_time_high = current_value
+    if not self.position:
+        # Check for buy signal (SMA crosses above EMA)
+        if self.sma[0] > self.ema[0] and self.sma[-1] <= self.ema[-1]:
+            self.log(f'BUY CREATE, {self.dataclose[0]:.5f}')
 
+            # Define stop loss and take profit prices for a buy order
+            stop_loss_price = self.dataclose[0] - (self.params.stop_loss * self.params.pip_value)
+            take_profit_price = self.dataclose[0] + (self.params.take_profit * self.params.pip_value)
 
-        if self.order:
-            return
+            self.log(f'BUY Stop Loss: {stop_loss_price:.5f}, Take Profit: {take_profit_price:.5f}', doprint=True)
 
-        if not self.position:
-            if self.sma[0] > self.ema[0]:
-                self.log(f'BUY CREATE, {self.dataclose[0]:.5f}')
-                self.order = self.buy()
+            # Place bracket order (stop loss and take profit) for the buy order
+            self.order = self.buy_bracket(
+                stopprice=stop_loss_price,  # Stop-loss
+                limitprice=take_profit_price  # Take-profit
+            )
+            self.trade_count += 1
 
-                # Define stop loss and take profit prices
-                stop_loss_price = self.dataclose[0] - (self.params.stop_loss * self.params.pip_value)
+        # Check for sell signal (SMA crosses below EMA)
+        elif self.sma[0] < self.ema[0] and self.sma[-1] >= self.ema[-1]:
+            self.log(f'SELL CREATE, {self.dataclose[0]:.5f}')
 
+            # Define stop loss and take profit prices for a sell order
+            stop_loss_price = self.dataclose[0] + (self.params.stop_loss * self.params.pip_value)
+            take_profit_price = self.dataclose[0] - (self.params.take_profit * self.params.pip_value)
 
-                take_profit_price = self.dataclose[0] + (self.params.take_profit * self.params.pip_value)
+            self.log(f'SELL Stop Loss: {stop_loss_price:.5f}, Take Profit: {take_profit_price:.5f}', doprint=True)
 
-                # Place stop loss order
-                self.sell(exectype=bt.Order.Stop, price=stop_loss_price)
-                # Place take profit order
-                self.sell(exectype=bt.Order.Limit, price=take_profit_price)
+            # Place bracket order (stop loss and take profit) for the sell order
+            self.order = self.sell_bracket(
+                stopprice=stop_loss_price,  # Stop-loss
+                limitprice=take_profit_price  # Take-profit
+            )
+            self.trade_count += 1
 
-        else:
-            if self.sma[0] < self.ema[0]:
-                self.log(f'SELL CREATE, {self.dataclose[0]:.5f}')
-                self.order = self.sell()
-
-                # Define stop loss and take profit prices
-                stop_loss_price = self.dataclose[0] + (self.params.stop_loss * self.params.pip_value)
-                take_profit_price = self.dataclose[0] - (self.params.take_profit * self.params.pip_value)
-
-                # Place stop loss order
-                self.buy(exectype=bt.Order.Stop, price=stop_loss_price)
-                # Place take profit order
-                self.buy(exectype=bt.Order.Limit, price=take_profit_price)
-
-
-
-class MacrossOverLive():
-
-    def __init__(self, data, symbol='EURUSD', timeframe=mt5.TIMEFRAME_M15):
-        self.symbol = symbol
-        self.timeframe = timeframe
-
-    
-
-
-    

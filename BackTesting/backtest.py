@@ -8,8 +8,10 @@ import multiprocessing
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from Data import dataLoader as dl
+
 from Strategies.MaCrossOver import MaCrossOverBt 
 from Strategies.MeanReversion import MeanReversionStrategy 
+from Strategies.SupplyAndDemand import TrendFollowingStrategy
 
 
 
@@ -25,7 +27,7 @@ class Backtester:
         """
         cerebro = bt.Cerebro()
 
-        fxdata = dl.Data(timeframe=mt5.TIMEFRAME_M15, numOfCandles=1000)
+        fxdata = dl.Data(timeframe=mt5.TIMEFRAME_H1, numOfCandles=1000, symbol='GBPUSD')
         twoWeekData = fxdata.full_data
 
         # Ensure data is not empty
@@ -41,15 +43,15 @@ class Backtester:
         
 
         # Add a strategy
-        strats = cerebro.optstrategy(
-            MeanReversionStrategy,
-            bollinger_period=range(10, 20),
-            atr_period = range(10,20),
-            atr_mult=range(2,10),
-            profit_mult=range(1,10)
-            )
+        # strats = cerebro.optstrategy(
+        #     strategy,
+        #     bollinger_period=range(10, 20),
+        #     atr_period = range(10,20),
+        #     atr_mult=range(2,10),
+        #     profit_mult=range(1,10)
+        #     )
 
-        # cerebro.addstrategy(strategy)
+        cerebro.addstrategy(strategy)
 
         # Set initial cash
         cerebro.broker.setcash(100000)
@@ -67,8 +69,8 @@ class Backtester:
         # print(f"Best MA Period: {best_strategy.params.maperiod} with Final Value: {best_strategy.broker.get_value():.2f}")
 
         # Plot results if needed
-        # if plot:
-        #     cerebro.plot(style='bar')
+        if plot:
+            cerebro.plot(style='bar')
 
 
 
@@ -77,4 +79,4 @@ if __name__ == '__main__':
     # Required for Windows to properly handle multiprocessing
     multiprocessing.freeze_support()  
     # Run the backtest using TestStrategy
-    Backtester.runBackTestForStrategy(MeanReversionStrategy, plot=True)
+    Backtester.runBackTestForStrategy(TrendFollowingStrategy, plot=True)
