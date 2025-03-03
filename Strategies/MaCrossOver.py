@@ -9,8 +9,8 @@ import MetaTrader5 as mt5
 
 class MaCrossOverBt(bt.Strategy):
     params = (
-        ('maperiod', 15),
-        ('maperiod2', 25),
+        ('maperiod', 34),
+        ('maperiod2', 50),
         ('printlog', False),
         ('pip_value', 0.0001),  # Default pip value for most currency pairs
         ('stop_loss', 30),  # 10 pips stop loss
@@ -31,10 +31,12 @@ class MaCrossOverBt(bt.Strategy):
         self.ema = bt.indicators.ExponentialMovingAverage(
             self.datas[0], period=self.params.maperiod2)
                 # Initialize variable for tracking all-time high
-        self.all_time_high = self.broker.get_value()
+        self.all_time_high = self.broker.get_cash()
 
     def stop(self):
-        self.log(f'Final All-Time High Value: {self.all_time_high:.2f}', doprint=True)
+        self.log(f'Final Value: {self.broker.get_cash():.2f}', doprint=True)
+        self.log(f'ma: {self.params.maperiod}', doprint=True)
+
 
     def notify_order(self, order):
         if order.status in [order.Submitted, order.Accepted]:
@@ -50,13 +52,11 @@ class MaCrossOverBt(bt.Strategy):
 
     def next(self):
 
-                # Update all-time high
-        current_value = self.broker.getvalue()
+        # Update all-time high
+        current_value = self.broker.get_cash()
         if current_value > self.all_time_high:
             self.all_time_high = current_value
 
-                # Log the all-time high
-        self.log(f'All-Time High Value: {self.all_time_high:.2f}')
 
         if self.order:
             return
