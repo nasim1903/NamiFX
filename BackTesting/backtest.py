@@ -12,6 +12,7 @@ from Data import dataLoader as dl
 from Strategies.MaCrossOver import MaCrossOverBt 
 from Strategies.MeanReversion import MeanReversionStrategy 
 from Strategies.SupplyAndDemand import TrendFollowingStrategy
+from Strategies.CrashAndBoom import CrashBoomStrategy
 
 
 
@@ -79,4 +80,4 @@ if __name__ == '__main__':
     # Required for Windows to properly handle multiprocessing
     multiprocessing.freeze_support()  
     # Run the backtest using TestStrategy
-    Backtester.runBackTestForStrategy(TrendFollowingStrategy, plot=True)
+    Backtester.runBackTestForStrategy(CrashBoomStrategy, plot=True)
