@@ -11,7 +11,7 @@ class CrashBoomStrategy(bt.Strategy):
         ('printlog', True),
         ('bollinger_period', 20),  
         ('devfactor', 2),          
-        ('ema_trend_period', 400), 
+        ('ema_trend_period', 100), 
         ('ema_signal_period', 5),  
         ('atr_period', 14),        
         ('atr_mult', 1.5),         
