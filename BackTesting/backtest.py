@@ -73,7 +73,7 @@ class Backtester:
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
         cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
 
-        cerebro.broker.set_cash(100000)  # Example cash setting
+        cerebro.broker.set_cash(100000)  
         result = cerebro.run(maxcpus=maxcpus)  # Run backtest with specified CPU cores
         
         # Collecting results into a list of dictionaries
@@ -109,76 +109,28 @@ class Backtester:
         btData15m = bt.feeds.PandasData(dataname=dl.Data(symbol='EURUSD').full_data)
         cerebro.adddata(btData15m)
 
-
-
-        # Add a strategy optimization
-        # cerebro.optstrategy(
-        #     MaCrossOverBt,
-        #     maperiod=range(10, 15, 2),
-        # )
-
-        # cerebro.optstrategy(
-        #     MeanReversionStrategy,
-        #     bollinger_period=range(10, 13),
-        # )
-
-        params = {
-            # "bollinger_period": range(20, 31, 5),  # 20, 25, 30
-            "ema_trend_period": range(50, 100, 10),  # 50, 60, 70, 80, 90
-            "ema_signal_period": range(10, 21, 5),  # 10, 15, 20
-            # "atr_period": range(7, 21, 7),  # 7, 14
-            # "atr_mult": [1.0, 3.0],  # Specific values
-            # "trail_trigger": range(10, 20, 5),  # 10, 15
-            # "trail_atr_mult": [1, 3],  # Specific values
+        crashBoomParams = {
+            "bollinger_period": range(20, 31, 5),  
+            "ema_trend_period": range(50, 100, 10),
+            "ema_signal_period": range(10, 21, 5), 
         }
 
         # Call the function with the parameter dictionary
-        Backtester.runOptBacktest(CrashBoomStrategy, maxcpus=12, fxdata = btData15m, params=params)
+        crashStrategy = Backtester.runOptBacktest(CrashBoomStrategy, maxcpus=12, fxdata = btData15m, params=crashBoomParams)
 
-        # # Dictionary to store separate DataFrames for each strategy
-        # strategy_dfs = {}
 
-        # for run in results:
-        #     for strategy in run:
-        #         sharpe = strategy.analyzers.sharpe.get_analysis()
-        #         drawdown = strategy.analyzers.drawdown.get_analysis()
-        #         sqn = strategy.analyzers.sqn.get_analysis()
-        #         params = strategy.params
+        maCrossOverParams = {
+             "maperiod": range(10, 15, 2)
+        }
+        maCrossStrategy = Backtester.runOptBacktest(MaCrossOverBt, maxcpus=12, fxdata = btData15m, params=maCrossOverParams)
+        
+        
+        meanReversionParams = {
+            "bollinger_period": range(10, 13),
+        }
+        meanReversionStrat = Backtester.runOptBacktest(MeanReversionStrategy, maxcpus=12, fxdata = btData15m, params=meanReversionParams)
 
-        #         # Convert the params to a dict
-        #         params_dict = dict(params._getkwargs()) if hasattr(params, '_getkwargs') else vars(params)
-
-        #         # Create a combined dictionary with metrics and parameters
-        #         combined = {
-        #             "sharpe_ratio": sharpe.get('sharperatio', float('nan')),
-        #             "max_drawdown": drawdown.max.drawdown if drawdown else float('nan'),
-        #             "sqn": sqn.get('sqn', float('nan')),
-        #         }
-
-        #         # Add strategy parameters to the dictionary, excluding 'name' to avoid redundancy
-        #         strategy_name = params_dict.get('name', 'Unnamed Strategy')
-        #         combined.update(params_dict)
-        #         combined.pop('name', None)  # Remove the redundant 'name' parameter
-
-        #         # If this strategy doesn't have a DataFrame yet, create it
-        #         if strategy_name not in strategy_dfs:
-        #             strategy_dfs[strategy_name] = pd.DataFrame(columns=combined.keys())
-
-        #         # Convert the combined dictionary to a DataFrame
-        #         new_df = pd.DataFrame([combined])
-
-        #         # Concatenate the new row with the existing DataFrame for the strategy
-        #         strategy_dfs[strategy_name] = pd.concat([strategy_dfs[strategy_name], new_df], ignore_index=True)
-
-        # # Now each strategy will have its own DataFrame in the dictionary
-        # # Optionally, print each strategy's DataFrame for inspection
-        # for strategy_name, df in strategy_dfs.items():
-        #     print(f"Strategy: {strategy_name}")
-        #     print(df)
-        #     print()
-
-        # return strategy_dfs  # Return the dictionary of DataFrames for further processing
-
+        print(f"Crash: \n{crashStrategy} \nCross:\n{maCrossStrategy}\nMean Reversion:\n{meanReversionStrat}")
 
 
                     
