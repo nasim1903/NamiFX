@@ -18,7 +18,7 @@ from Strategies.CrashAndBoom import CrashBoomStrategy
 class Backtester:
 
     @staticmethod
-    def runBackTestForStrategy(strategy: Type[bt.Strategy], plot: bool = True, fxdata: dl.Data = dl.Data(timeframe=mt5.TIMEFRAME_H1, numOfCandles=1000, symbol='EURUSD')):
+    def runBackTestForStrategy(strategy: Type[bt.Strategy], plot: bool = True, fxdata: dl.Data = dl.Data(symbol='EURUSD')):
         """
         Runs a backtest using the provided strategy.
 
@@ -35,25 +35,27 @@ class Backtester:
         cerebro.addsizer(bt.sizers.FixedSize, stake=10000)
         
         cerebro.addstrategy(strategy)
+                # Add analyzers for performance metrics
+        cerebro.addanalyzer(btanalyzers.SharpeRatio, _name="sharpe")
+        cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
+        cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
 
         # Set initial cash
         cerebro.broker.setcash(100000)
-        cerebro.broker.setcommission(0.01)
 
         # Run optimization with multiprocessing
-        cerebro.run()
+        result = cerebro.run()
+
+        print(f"Sharpe: {result[0].analyzers.sharpe.get_analysis().get('sharperatio')}")
 
         # Plot results if needed
         if plot:
             cerebro.plot(style='bar')
 
     def runAllBacktest():
-
         cerebro = bt.Cerebro()
         # Feed data into Backtrader
-        btData15m = bt.feeds.PandasData(dataname=dl.Data(timeframe=mt5.TIMEFRAME_M15, symbol='EURUSD').get_last_2_weeks_data())
-        btData1h = bt.feeds.PandasData(dataname=dl.Data(timeframe=mt5.TIMEFRAME_H1, symbol='EURUSD').get_last_2_weeks_data())
-
+        btData15m = bt.feeds.PandasData(dataname=dl.Data(symbol='EURUSD').full_data)
         cerebro.adddata(btData15m)
 
         # Add a FixedSize sizer according to the stake
@@ -62,17 +64,25 @@ class Backtester:
         # Add a strategy optimization
         cerebro.optstrategy(
             MaCrossOverBt,
-            maperiod=range(10, 20),
+            maperiod=range(10, 15),
         )
 
         cerebro.optstrategy(
             MeanReversionStrategy,
-            bollinger_period=range(10, 15),
-            atr_period=range(10, 13),
-            atr_mult=range(2, 5),
-            profit_mult=range(1, 3)
+            bollinger_period=range(10, 12),
         )
 
+        cerebro.optstrategy(
+            CrashBoomStrategy,
+            bollinger_period=range(20, 31, 5),  # Steps of 2 (20, 22, 24)
+            # ema_trend_period=range(50, 100, 10),  # Steps of 10 (50, 60, 70, 80, 90)
+            # ema_signal_period=range(10,21,5),  # Steps of 5 (10, 15)
+            # atr_period=range(7, 21, 7),  # Steps of 2 (7, 9, 11, 13)
+        #     atr_mult=[1.0, 1.5, 2.0],  # Specific values
+        #     profit_mult=[1, 1.5, 2],  # Specific values
+        #     trail_trigger=range(10, 20, 5),  # Steps of 5 (10, 15)
+        #     trail_atr_mult=[1, 1.5, 2],  # Specific values
+        )
         # Set initial cash
         cerebro.broker.setcash(100000)
         cerebro.broker.setcommission(0.01)
@@ -85,36 +95,53 @@ class Backtester:
         # Run optimization with multiprocessing
         results = cerebro.run(maxcpus=12)
 
-        # List to store results for strategy ranking
-        strategy_results = []
+        # Dictionary to store separate DataFrames for each strategy
+        strategy_dfs = {}
 
-        # Loop through each set of results (for each optimized strategy)
         for run in results:
             for strategy in run:
                 sharpe = strategy.analyzers.sharpe.get_analysis()
                 drawdown = strategy.analyzers.drawdown.get_analysis()
                 sqn = strategy.analyzers.sqn.get_analysis()
+                params = strategy.params
 
-                # Collect performance metrics
-                strategy_results.append({
+                # Convert the params to a dict
+                params_dict = dict(params._getkwargs()) if hasattr(params, '_getkwargs') else vars(params)
+
+                # Create a combined dictionary with metrics and parameters
+                combined = {
                     "sharpe_ratio": sharpe.get('sharperatio', float('nan')),
                     "max_drawdown": drawdown.max.drawdown if drawdown else float('nan'),
                     "sqn": sqn.get('sqn', float('nan')),
-                })
+                }
 
-        # Convert to DataFrame for easier analysis and sorting
-        df = pd.DataFrame(strategy_results)
+                # Add strategy parameters to the dictionary, excluding 'name' to avoid redundancy
+                strategy_name = params_dict.get('name', 'Unnamed Strategy')
+                combined.update(params_dict)
+                combined.pop('name', None)  # Remove the redundant 'name' parameter
 
-        # Rank strategies based on Sharpe Ratio, Drawdown, and SQN (can adjust rankings as needed)
-        df['rank'] = df['sharpe_ratio'] - df['max_drawdown'] + df['sqn']  # Example formula for ranking
-        df = df.sort_values(by='rank', ascending=False)
+                # If this strategy doesn't have a DataFrame yet, create it
+                if strategy_name not in strategy_dfs:
+                    strategy_dfs[strategy_name] = pd.DataFrame(columns=combined.keys())
 
-        print("Strategy Ranking:")
-        print(df)
+                # Convert the combined dictionary to a DataFrame
+                new_df = pd.DataFrame([combined])
 
-        # Optionally, return the ranked strategies for further processing
-        return df
-            
+                # Concatenate the new row with the existing DataFrame for the strategy
+                strategy_dfs[strategy_name] = pd.concat([strategy_dfs[strategy_name], new_df], ignore_index=True)
+
+        # Now each strategy will have its own DataFrame in the dictionary
+        # Optionally, print each strategy's DataFrame for inspection
+        for strategy_name, df in strategy_dfs.items():
+            print(f"Strategy: {strategy_name}")
+            print(df)
+            print()
+
+        return strategy_dfs  # Return the dictionary of DataFrames for further processing
+
+
+
+                    
         
 
 if __name__ == '__main__':

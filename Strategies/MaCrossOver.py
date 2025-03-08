@@ -3,6 +3,7 @@ import backtrader as bt
 
 class MaCrossOverBt(bt.Strategy):
     params = (
+         ('name', 'MaCrossOver'),
         ('maperiod', 10),
         ('maperiod2', 50),
         ('printlog', True),

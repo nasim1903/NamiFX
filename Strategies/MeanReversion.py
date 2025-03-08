@@ -9,6 +9,7 @@ import MetaTrader5 as mt5
 
 class MeanReversionStrategy(bt.Strategy):
     params = (
+        ('name', 'MeanReversionStrategy'),
         ('printlog', False),
         ('bollinger_period', 20),  # Bollinger Bands period
         ('devfactor', 2),          # Standard deviation factor
@@ -75,26 +76,26 @@ class MeanReversionStrategy(bt.Strategy):
         close = self.data.close[0]
         
         if not self.position:
-            if close < lower_band:
+            if close < lower_band:  # Buy Signal
                 stop_loss = close - (self.params.atr_mult * atr_value)
                 take_profit = close + (self.params.profit_mult * atr_value)
 
                 self.order = self.buy_bracket(
+                    price=close,  # Entry price
                     stopprice=stop_loss,  # Stop-loss
                     limitprice=take_profit  # Take-profit
                 )
                 self.trade_count += 1
+                self.log(f'BUY ORDER PLACED: Entry={close:.5f}, SL={stop_loss:.5f}, TP={take_profit:.5f}')
 
-                # print(f'Trade {self.trade_count}: BUY at {close}, LOWER-BAND:, {lower_band}, SL: {stop_loss}, TP: {take_profit}')
-
-            elif close > upper_band:
+            elif close > upper_band:  # Sell Signal
                 stop_loss = close + (self.params.atr_mult * atr_value)
                 take_profit = close - (self.params.profit_mult * atr_value)
 
                 self.order = self.sell_bracket(
+                    price=close,  # Entry price
                     stopprice=stop_loss,  # Stop-loss
                     limitprice=take_profit  # Take-profit
                 )
                 self.trade_count += 1
-
-                # print(f'Trade {self.trade_count}: SELL at {close}, UPPER-BAND:, {upper_band}, SL: {stop_loss}, TP: {take_profit}')
+                self.log(f'SELL ORDER PLACED: Entry={close:.5f}, SL={stop_loss:.5f}, TP={take_profit:.5f}')

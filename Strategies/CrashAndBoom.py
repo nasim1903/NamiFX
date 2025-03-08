@@ -8,12 +8,13 @@ import MetaTrader5 as mt5
 
 class CrashBoomStrategy(bt.Strategy):
     params = (
+        ('name', 'CrashBoomStrategy'),
         ('printlog', True),
         ('bollinger_period', 20),  
         ('devfactor', 2),          
         ('ema_trend_period', 100), 
-        ('ema_signal_period', 5),  
-        ('atr_period', 14),        
+        ('ema_signal_period', 20),  
+        ('atr_period', 7),        
         ('atr_mult', 1.5),         
         ('profit_mult', 2),        
         ('trail_trigger', 10),     # Move SL to breakeven after 10 pips
@@ -31,6 +32,7 @@ class CrashBoomStrategy(bt.Strategy):
         self.dataclose = self.datas[0].close
         self.order = None
         self.trade_count = 0  
+        self.entry_price = None  # Initialize entry_price
         self.trailing_stop = None  
 
         # Higher timeframe indicators (Trend)
@@ -64,10 +66,10 @@ class CrashBoomStrategy(bt.Strategy):
         if order.status in [order.Completed]:
             if order.isbuy():
                 self.log(f'BUY EXECUTED, Price: {order.executed.price:.5f}')
-                self.entry_price = order.executed.price  # Store entry price
+                self.entry_price = order.executed.price  # Store entry price on buy execution
             elif order.issell():
                 self.log(f'SELL EXECUTED, Price: {order.executed.price:.5f}')
-                self.entry_price = order.executed.price  
+                self.entry_price = order.executed.price  # Store entry price on sell execution
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log('Order Canceled/Margin/Rejected')
         self.order = None
@@ -118,23 +120,23 @@ class CrashBoomStrategy(bt.Strategy):
                 self.log(f'Trade {self.trade_count}: SELL at {price}, SL: {stop_loss}, TP: {take_profit}')
         
         # **Implement Trailing Stop**
-        elif self.position:
-            if self.position.size > 0:  # Long Position
-                profit_pips = (price - self.entry_price) * 10000  
-                if profit_pips > self.params.trail_trigger:  
-                    new_sl = max(self.trailing_stop, self.entry_price)  # Move SL to breakeven
-                    new_sl = max(new_sl, price - (self.params.trail_atr_mult * atr_value))  # Trail by ATR
-                    if new_sl > self.trailing_stop:  # Only update if it's moving in favor
-                        self.trailing_stop = new_sl
-                        self.log(f'Trailing SL moved to {new_sl:.5f}')
-                        self.sell(exectype=bt.Order.Stop, price=self.trailing_stop)  
+        # elif self.position:
+        #     if self.position.size > 0:  # Long Position
+        #         profit_pips = (price - self.entry_price) * 10000  
+        #         if profit_pips > self.params.trail_trigger:  
+        #             new_sl = max(self.trailing_stop, self.entry_price)  # Move SL to breakeven
+        #             new_sl = max(new_sl, price - (self.params.trail_atr_mult * atr_value))  # Trail by ATR
+        #             if new_sl > self.trailing_stop:  # Only update if it's moving in favor
+        #                 self.trailing_stop = new_sl
+        #                 self.log(f'Trailing SL moved to {new_sl:.5f}')
+        #                 self.sell(exectype=bt.Order.Stop, price=self.trailing_stop)  
 
-            elif self.position.size < 0:  # Short Position
-                profit_pips = (self.entry_price - price) * 10000  
-                if profit_pips > self.params.trail_trigger:  
-                    new_sl = min(self.trailing_stop, self.entry_price)  
-                    new_sl = min(new_sl, price + (self.params.trail_atr_mult * atr_value))  
-                    if new_sl < self.trailing_stop:  
-                        self.trailing_stop = new_sl
-                        self.log(f'Trailing SL moved to {new_sl:.5f}')
-                        self.buy(exectype=bt.Order.Stop, price=self.trailing_stop)  
+        #     elif self.position.size < 0:  # Short Position
+        #         profit_pips = (self.entry_price - price) * 10000  
+        #         if profit_pips > self.params.trail_trigger:  
+        #             new_sl = min(self.trailing_stop, self.entry_price)  
+        #             new_sl = min(new_sl, price + (self.params.trail_atr_mult * atr_value))  
+        #             if new_sl < self.trailing_stop:  
+        #                 self.trailing_stop = new_sl
+        #                 self.log(f'Trailing SL moved to {new_sl:.5f}')
+        #                 self.buy(exectype=bt.Order.Stop, price=self.trailing_stop)  
