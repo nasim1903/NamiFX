@@ -46,7 +46,7 @@ class Backtester:
         # Run optimization with multiprocessing
         result = cerebro.run()
 
-        print(f"Sharpe: {result[0].analyzers.sharpe.get_analysis().get('sharperatio').get("sharperatio")}")
+        print(f"Sharpe: {result[0].analyzers.sharpe.get_analysis().get('sharperatio')}")
 
         # Plot results if needed
         if plot:
