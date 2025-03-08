@@ -53,7 +53,7 @@ class Backtester:
             cerebro.plot(style='bar')
 
 
-    def runOptBacktest(strategy: Type[bt.Strategy], maxcpus: int = 12, fxdata: dl.Data = dl.Data(symbol='EURUSD'), params = None):
+    def runOptBacktest(strategy: Type[bt.Strategy], maxcpus: int = 12, fxdata: dl.Data = dl.Data(timeframe=mt5.TIMEFRAME_M1, symbol='EURUSD').get_last_month_data(), params = None):
         cerebro = bt.Cerebro(optreturn=False)  # Create a new Cerebro instance
 
         if params is None:
@@ -62,18 +62,17 @@ class Backtester:
         cerebro.optstrategy(strategy, **params)  # Unpack params dictionary into optstrategy
 
         # Set initial cash
-        cerebro.broker.setcash(100000)
-        cerebro.broker.setcommission(0.01)
-        cerebro.adddata(fxdata)
+        cerebro.broker.setcash(10000)
+        btData15m = bt.feeds.PandasData(dataname=fxdata)
+        cerebro.adddata(btData15m)
         # Add a FixedSize sizer according to the stake
-        cerebro.addsizer(bt.sizers.FixedSize, stake=10000)
+        cerebro.addsizer(bt.sizers.FixedSize, stake=1000)
 
         # Add analyzers for performance metrics
         cerebro.addanalyzer(btanalyzers.SharpeRatio, _name="sharpe")
         cerebro.addanalyzer(bt.analyzers.DrawDown, _name="drawdown")
         cerebro.addanalyzer(bt.analyzers.SQN, _name="sqn")
 
-        cerebro.broker.set_cash(100000)  
         result = cerebro.run(maxcpus=maxcpus)  # Run backtest with specified CPU cores
         
         # Collecting results into a list of dictionaries
@@ -109,13 +108,20 @@ class Backtester:
         btData15m = bt.feeds.PandasData(dataname=dl.Data(symbol='EURUSD').full_data)
         cerebro.adddata(btData15m)
 
+        trendParams = {
+            'ema_period': range(100, 201, 20),  # 20 to 200, step 10
+            'atr_mult_sl': [1.5, 2, 2.5, 3],    # 1.5x to 3x for SL
+            'atr_mult_tp': [2, 2.5, 3],         # 2x to 3x for TP (for a 1:2 to 1:3 risk-reward ratio)
+        }
+
+        crashStrategy = Backtester.runOptBacktest(TrendFollowingStrategy, maxcpus=12, fxdata = btData15m, params=trendParams)
+
+
         crashBoomParams = {
             "bollinger_period": range(20, 31, 5),  
             "ema_trend_period": range(50, 100, 10),
             "ema_signal_period": range(10, 21, 5), 
         }
-
-        # Call the function with the parameter dictionary
         crashStrategy = Backtester.runOptBacktest(CrashBoomStrategy, maxcpus=12, fxdata = btData15m, params=crashBoomParams)
 
 
@@ -140,7 +146,13 @@ if __name__ == '__main__':
     # Required for Windows to properly handle multiprocessing
     multiprocessing.freeze_support()  
 
-    Backtester.runAllBacktest()
+    trendParams = {
+        'ema_period': range(100, 201, 20),  # 20 to 200, step 10
+        'atr_mult_sl': [1.5, 2, 2.5, 3],    # 1.5x to 3x for SL
+        'atr_mult_tp': [2, 2.5, 3],         # 2x to 3x for TP (for a 1:2 to 1:3 risk-reward ratio)
+    }
+
+    crashStrategy = Backtester.runOptBacktest(TrendFollowingStrategy, maxcpus=12, params=trendParams)
 
     # Run the backtest using TestStrategy
-    # Backtester.runBackTestForStrategy(CrashBoomStrategy, plot=True)
+    # Backtester.runBackTestForStrategy(TrendFollowingStrategy, plot=True)
