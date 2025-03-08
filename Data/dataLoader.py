@@ -37,6 +37,13 @@ class Data:
         """
         cutoff_date = datetime.now() - timedelta(weeks=2)
         return self.full_data[self.full_data.index >= cutoff_date]  # Compare with index
+    
+    def get_last_month_data(self):
+        """
+        Retrieve the last 2 weeks of market data.
+        """
+        cutoff_date = datetime.now() - timedelta(weeks=4)
+        return self.full_data[self.full_data.index >= cutoff_date]  # Compare with index
 
     def get_live_data(self, symbol="EURUSD", timeframe=mt5.TIMEFRAME_M1, count=500):
         """
