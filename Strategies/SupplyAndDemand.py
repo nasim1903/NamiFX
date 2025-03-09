@@ -7,8 +7,8 @@ class TrendFollowingStrategy(bt.Strategy):
         ('stoch_d', 3),         # Stochastic D period
         ('stoch_smooth', 3),    # Smoothing factor for stochastic
         ('atr_period', 14),     # ATR period for SL/TP calculation
-        ('atr_mult_sl', 1.5),   # SL multiplier
-        ('atr_mult_tp', 10),     # TP multiplier for 1:2 risk-reward
+        ('atr_mult_sl', 1.2),   # SL multiplier
+        ('atr_mult_tp', 2),     # TP multiplier for 1:2 risk-reward
     )
 
     def __init__(self):
