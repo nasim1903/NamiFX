@@ -1,7 +1,6 @@
 import sys
 import os
 import pandas as pd
-import MetaTrader5 as mt5
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from BackTesting import backtest
 
@@ -22,6 +21,23 @@ def convertDfToCsv(df, filename="backtest_results.csv"):
         print("No data to save.")
 
 
-# Run the function correctly
-df = backtest.Backtester.runAllBackTests()
-convertDfToCsv(df)
+
+def readCsvToDf(filename="backtest_results.csv"):
+    """
+    Reads a CSV file and converts it into a Pandas DataFrame.
+
+    :param filename: The name of the CSV file (default: "backtest_results.csv").
+    :return: A Pandas DataFrame containing the CSV data.
+    """
+    file_path = os.path.join(os.getcwd(), filename)
+    
+    if os.path.exists(file_path):
+        df = pd.read_csv(file_path)
+        print("CSV data loaded successfully:")
+        print(df)
+        return df
+    else:
+        print("Error: File not found.")
+        return None
+
+
