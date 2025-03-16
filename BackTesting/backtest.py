@@ -14,6 +14,7 @@ from Strategies.MaCrossOver import MaCrossOverBt
 from Strategies.MeanReversion import MeanReversionStrategy 
 from Strategies.SupplyAndDemand import TrendFollowingStrategy
 from Strategies.CrashAndBoom import CrashBoomStrategy
+from Strategies.SwingFailure import SFPStrategy
 
 class Backtester:
 
@@ -177,7 +178,7 @@ class Backtester:
         symbols = ['AUDCAD', 'EURUSD', 'GBPJPY', 'USDCHF', 'AUDNZD', 'USDJPY', 'GBPUSD']
 
         # Define strategies to test
-        strategies = [TrendFollowingStrategy, CrashBoomStrategy, MaCrossOverBt, MeanReversionStrategy]
+        strategies = [SFPStrategy, TrendFollowingStrategy, CrashBoomStrategy, MaCrossOverBt, MeanReversionStrategy]
 
         # Store all results in a list
         all_results = []
